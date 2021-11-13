@@ -80,7 +80,7 @@ struct Cache {
 	int find_address(unsigned int address) {
 		unsigned int block_num = address >> address_offset;
 		for (unsigned int i = 0; i < assoc; i++) {
-			if (lines[i][block_num % bank_size].address == address) {
+			if (lines[i][block_num % bank_size].address == (int)address) {
 				return i;
 			}
 		}
@@ -88,7 +88,7 @@ struct Cache {
 	}
 
 	// loads address to cache using LRU replacement policy
-	int load_address(unsigned int address) {
+	unsigned int load_address(unsigned int address) {
 		unsigned int block_num = address >> address_offset, bank_num = 0;
 		for (unsigned int i = 1; i < assoc; i++) {
 			if (lines[i][block_num % bank_size].used < lines[bank_num][block_num % bank_size].used) {
@@ -112,7 +112,7 @@ struct Cache {
 	bool put_address(unsigned int address) {
 		unsigned int block_num = address >> address_offset;
 		address = block_num << address_offset;
-		unsigned int bank_num = find_address(address);
+		int bank_num = find_address(address);
 		if (bank_num != -1) {
 			cache_hit++;
 			lines[bank_num][block_num % bank_size].used = timer++;
