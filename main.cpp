@@ -78,8 +78,9 @@ struct Cache {
 	// if stored returns its position,
 	// otherwise returns -1
 	int find_address(unsigned int address) {
+		unsigned int block_num = address >> address_offset;
 		for (unsigned int i = 0; i < assoc; i++) {
-			if (lines[i][address % bank_size].address == address) {
+			if (lines[i][block_num % bank_size].address == address) {
 				return i;
 			}
 		}
@@ -88,19 +89,19 @@ struct Cache {
 
 	// loads address to cache using LRU replacement policy
 	int load_address(unsigned int address) {
-		unsigned int bank_num = 0;
+		unsigned int block_num = address >> address_offset, bank_num = 0;
 		for (unsigned int i = 1; i < assoc; i++) {
-			if (lines[i][address % bank_size].used < lines[bank_num][address % bank_size].used) {
+			if (lines[i][block_num % bank_size].used < lines[bank_num][block_num % bank_size].used) {
 				bank_num = i;
 			}
 		}
 		// if it's needed to replace element in cache,
 		// element is going to next level device
 		// (from L1 to L2, from L2 to RAM)
-		if (next_device != nullptr && lines[bank_num][address % bank_size].address != -1) {
-			next_device->put_address(lines[bank_num][address % bank_size].address);
+		if (next_device != nullptr && lines[bank_num][block_num % bank_size].address != -1) {
+			next_device->put_address(lines[bank_num][block_num % bank_size].address);
 		}
-		lines[bank_num][address % bank_size].address = address;
+		lines[bank_num][block_num % bank_size].address = address;
 		return bank_num;
 	}
 
@@ -109,16 +110,17 @@ struct Cache {
 	// if not, loads this address to cache;
 	// registers cache hits and misses
 	bool put_address(unsigned int address) {
-		address = (address >> address_offset) << address_offset;
-		int bank_num = find_address(address);
+		unsigned int block_num = address >> address_offset;
+		address = block_num << address_offset;
+		unsigned int bank_num = find_address(address);
 		if (bank_num != -1) {
 			cache_hit++;
-			lines[bank_num][address % bank_size].used = timer++;
+			lines[bank_num][block_num % bank_size].used = timer++;
 			return true;
 		}
 		cache_miss++;
 		bank_num = load_address(address);
-		lines[bank_num][address % bank_size].used = timer++;
+		lines[bank_num][block_num % bank_size].used = timer++;
 		return false;
 	}
 };
@@ -140,9 +142,6 @@ struct Cache_controller {
 
 int main() {
 	f(1.0);
-
-	std::cerr << l1.cache_hit << " " << l1.cache_miss << std::endl;
-	std::cerr << l2.cache_hit << " " << l2.cache_miss << std::endl;
 
 	std::cout << l1.cache_hit / (double)(l1.cache_hit + l1.cache_miss) * 100 << std::endl;
 	std::cout << l2.cache_hit / (double)(l2.cache_hit + l2.cache_miss) * 100 << std::endl;
