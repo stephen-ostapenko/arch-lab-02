@@ -135,6 +135,7 @@ struct Cache_controller {
 	}
 } controller;
 
+// file with function
 #include "func.h"
 
 int main() {
